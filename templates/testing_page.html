@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Live Video Testing - Shield Vision{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3><i class="fas fa-video"></i> Live Video Testing Center</h3>
+                    <p class="mb-0">Test MobileNet LSTM and Shield Vision Audio detection in real-time</p>
+                </div>
+                <div class="card-body">
+                    <!-- Video Source Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h5><i class="fas fa-camera"></i> Video Source</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="video-source-form">
+                                        <div class="mb-3">
+                                            <label for="source-type" class="form-label">Source Type:</label>
+                                            <select class="form-select" id="source-type" onchange="updateSourceInput()">
+                                                <option value="webcam">Webcam</option>
+                                                <option value="rtsp">RTSP Camera</option>
+                                                <option value="file">Video File</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3" id="webcam-input">
+                                            <label for="camera-index" class="form-label">Camera Index:</label>
+                                            <select class="form-select" id="camera-index">
+                                                <option value="0">Camera 0 (Default)</option>
+                                                <option value="1">Camera 1</option>
+                                                <option value="2">Camera 2</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3" id="rtsp-input" style="display: none;">
+                                            <label for="rtsp-url" class="form-label">RTSP URL:</label>
+                                            <input type="text" class="form-control" id="rtsp-url"
+                                                   placeholder="rtsp://username:password@ip:port/stream">
+                                        </div>
+
+                                        <div class="mb-3" id="file-input" style="display: none;">
+                                            <label for="video-file" class="form-label">Video File Path:</label>
+                                            <input type="text" class="form-control" id="video-file"
+                                                   placeholder="C:/path/to/video.mp4">
+                                        </div>
+
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-success" onclick="startTesting()">
+                                                <i class="fas fa-play"></i> Start Testing
+                                            </button>
+                                            <button type="button" class="btn btn-danger" onclick="stopTesting()" disabled id="stop-btn">
+                                                <i class="fas fa-stop"></i> Stop Testing
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5><i class="fas fa-cogs"></i> Detection Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="video-threshold" class="form-label">Video Detection Threshold:</label>
+                                        <input type="range" class="form-range" id="video-threshold"
+                                               min="0.1" max="1.0" step="0.1" value="0.7">
+                                        <span id="video-threshold-value">0.7</span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="audio-threshold" class="form-label">Audio Detection Threshold:</label>
+                                        <input type="range" class="form-range" id="audio-threshold"
+                                               min="0.1" max="1.0" step="0.1" value="0.6">
+                                        <span id="audio-threshold-value">0.6</span>
+                                    </div>
+
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="enable-audio" checked>
+                                        <label class="form-check-label" for="enable-audio">
+                                            Enable Audio Detection
+                                        </label>
+                                        <small class="form-text text-muted" id="audio-status-text">
+                                            Checking audio availability...
+                                        </small>
+                                    </div>
+
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="show-confidence" checked>
+                                        <label class="form-check-label" for="show-confidence">
+                                            Show Confidence Scores
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Video Display -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <h5><i class="fas fa-desktop"></i> Live Video Feed</h5>
+                                    <div>
+                                        <span class="badge bg-success" id="status-badge">Ready</span>
+                                        <span class="badge bg-info" id="fps-badge">0 FPS</span>
+                                    </div>
+                                </div>
+                                <div class="card-body text-center">
+                                    <div id="video-container" style="min-height: 400px; background: #f8f9fa; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center;">
+                                        <div id="video-placeholder">
+                                            <i class="fas fa-video fa-5x text-muted mb-3"></i>
+                                            <h4 class="text-muted">Select a video source and click "Start Testing"</h4>
+                                        </div>
+                                        <img id="video-stream" style="display: none; max-width: 100%; height: auto;" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detection Results -->
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6><i class="fas fa-eye"></i> Video Detection</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Status:</span>
+                                        <span class="badge bg-secondary" id="video-status">Inactive</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span>Confidence:</span>
+                                        <span id="video-confidence">0.00</span>
+                                    </div>
+                                    <div class="progress mt-2">
+                                        <div class="progress-bar" id="video-progress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6><i class="fas fa-volume-up"></i> Audio Detection</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Status:</span>
+                                        <span class="badge bg-secondary" id="audio-status">Inactive</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span>Confidence:</span>
+                                        <span id="audio-confidence">0.00</span>
+                                    </div>
+                                    <div class="progress mt-2">
+                                        <div class="progress-bar bg-info" id="audio-progress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-danger text-white">
+                                    <h6><i class="fas fa-shield-alt"></i> Combined Detection</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Status:</span>
+                                        <span class="badge bg-secondary" id="combined-status">Inactive</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span>Confidence:</span>
+                                        <span id="combined-confidence">0.00</span>
+                                    </div>
+                                    <div class="progress mt-2">
+                                        <div class="progress-bar bg-danger" id="combined-progress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detection Log -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6><i class="fas fa-list"></i> Detection Log</h6>
+                                    <button class="btn btn-sm btn-outline-light float-end" onclick="clearLog()">Clear Log</button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="detection-log" style="height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                                        <p class="text-muted">Detection events will appear here...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let isTestingActive = false;
+let detectionInterval;
+let audioStatusChecked = false;
+
+function updateSourceInput() {
+    const sourceType = document.getElementById('source-type').value;
+
+    // Hide all inputs
+    document.getElementById('webcam-input').style.display = 'none';
+    document.getElementById('rtsp-input').style.display = 'none';
+    document.getElementById('file-input').style.display = 'none';
+
+    // Show relevant input
+    if (sourceType === 'webcam') {
+        document.getElementById('webcam-input').style.display = 'block';
+    } else if (sourceType === 'rtsp') {
+        document.getElementById('rtsp-input').style.display = 'block';
+    } else if (sourceType === 'file') {
+        document.getElementById('file-input').style.display = 'block';
+    }
+}
+
+function getVideoSource() {
+    const sourceType = document.getElementById('source-type').value;
+
+    if (sourceType === 'webcam') {
+        return document.getElementById('camera-index').value;
+    } else if (sourceType === 'rtsp') {
+        return document.getElementById('rtsp-url').value;
+    } else if (sourceType === 'file') {
+        return document.getElementById('video-file').value;
+    }
+
+    return '0'; // Default to webcam
+}
+
+function startTesting() {
+    if (isTestingActive) return;
+
+    const videoSource = getVideoSource();
+    if (!videoSource) {
+        alert('Please specify a video source');
+        return;
+    }
+
+    isTestingActive = true;
+    document.getElementById('stop-btn').disabled = false;
+    document.querySelector('button[onclick="startTesting()"]').disabled = true;
+
+    // Update status
+    document.getElementById('status-badge').textContent = 'Active';
+    document.getElementById('status-badge').className = 'badge bg-success';
+
+    // Show video stream
+    document.getElementById('video-placeholder').style.display = 'none';
+    const videoStream = document.getElementById('video-stream');
+    videoStream.style.display = 'block';
+    videoStream.src = `/test_video_stream?source=${encodeURIComponent(videoSource)}`;
+
+    // Start detection monitoring
+    startDetectionMonitoring();
+
+    addToLog('Testing started with source: ' + videoSource, 'info');
+}
+
+function stopTesting() {
+    if (!isTestingActive) return;
+
+    isTestingActive = false;
+    document.getElementById('stop-btn').disabled = true;
+    document.querySelector('button[onclick="startTesting()"]').disabled = false;
+
+    // Update status
+    document.getElementById('status-badge').textContent = 'Stopped';
+    document.getElementById('status-badge').className = 'badge bg-danger';
+
+    // Hide video stream
+    document.getElementById('video-stream').style.display = 'none';
+    document.getElementById('video-placeholder').style.display = 'block';
+
+    // Stop detection monitoring
+    if (detectionInterval) {
+        clearInterval(detectionInterval);
+    }
+
+    // Reset detection displays
+    resetDetectionDisplays();
+
+    addToLog('Testing stopped', 'warning');
+}
+
+function startDetectionMonitoring() {
+    detectionInterval = setInterval(() => {
+        if (!isTestingActive) return;
+
+        fetch('/get_detection_results')
+            .then(response => response.json())
+            .then(data => {
+                updateDetectionDisplays(data);
+            })
+            .catch(error => {
+                console.error('Error fetching detection results:', error);
+            });
+    }, 1000); // Update every second
+}
+
+function updateDetectionDisplays(data) {
+    // Video detection
+    document.getElementById('video-confidence').textContent = data.video_confidence.toFixed(2);
+    document.getElementById('video-progress').style.width = (data.video_confidence * 100) + '%';
+    document.getElementById('video-status').textContent = data.video_threat ? 'THREAT' : 'Safe';
+    document.getElementById('video-status').className = data.video_threat ? 'badge bg-danger' : 'badge bg-success';
+
+    // Audio detection
+    document.getElementById('audio-confidence').textContent = data.audio_confidence.toFixed(2);
+    document.getElementById('audio-progress').style.width = (data.audio_confidence * 100) + '%';
+
+    // Update audio status based on audio_status field
+    let audioStatusText = 'Safe';
+    let audioStatusClass = 'badge bg-success';
+
+    if (data.audio_status === 'not_available') {
+        audioStatusText = 'Not Available';
+        audioStatusClass = 'badge bg-secondary';
+    } else if (data.audio_status === 'error') {
+        audioStatusText = 'Error';
+        audioStatusClass = 'badge bg-warning';
+    } else if (data.audio_status === 'quiet') {
+        audioStatusText = 'Quiet';
+        audioStatusClass = 'badge bg-info';
+    } else if (data.audio_status === 'active') {
+        audioStatusText = data.audio_threat ? 'THREAT' : 'Active';
+        audioStatusClass = data.audio_threat ? 'badge bg-danger' : 'badge bg-success';
+    }
+
+    document.getElementById('audio-status').textContent = audioStatusText;
+    document.getElementById('audio-status').className = audioStatusClass;
+
+    // Combined detection
+    document.getElementById('combined-confidence').textContent = data.combined_confidence.toFixed(2);
+    document.getElementById('combined-progress').style.width = (data.combined_confidence * 100) + '%';
+    document.getElementById('combined-status').textContent = data.combined_threat ? 'THREAT DETECTED' : 'Safe';
+    document.getElementById('combined-status').className = data.combined_threat ? 'badge bg-danger' : 'badge bg-success';
+
+    // Log threats and audio activity
+    if (data.combined_threat) {
+        addToLog(`THREAT DETECTED! Combined confidence: ${data.combined_confidence.toFixed(2)}`, 'danger');
+    }
+
+    // Log audio features if available
+    if (data.audio_features && data.audio_status === 'active') {
+        const volume = data.audio_features.volume || 0;
+        if (volume > 0.1) {
+            addToLog(`Audio activity detected - Volume: ${volume.toFixed(3)}`, 'info');
+        }
+    }
+}
+
+function resetDetectionDisplays() {
+    const elements = ['video', 'audio', 'combined'];
+    elements.forEach(type => {
+        document.getElementById(type + '-confidence').textContent = '0.00';
+        document.getElementById(type + '-progress').style.width = '0%';
+        document.getElementById(type + '-status').textContent = 'Inactive';
+        document.getElementById(type + '-status').className = 'badge bg-secondary';
+    });
+}
+
+function addToLog(message, type = 'info') {
+    const log = document.getElementById('detection-log');
+    const timestamp = new Date().toLocaleTimeString();
+    const alertClass = type === 'danger' ? 'alert-danger' : type === 'warning' ? 'alert-warning' : 'alert-info';
+
+    const logEntry = document.createElement('div');
+    logEntry.className = `alert ${alertClass} py-1 mb-1`;
+    logEntry.innerHTML = `<small><strong>${timestamp}</strong> - ${message}</small>`;
+
+    log.appendChild(logEntry);
+    log.scrollTop = log.scrollHeight;
+}
+
+function clearLog() {
+    document.getElementById('detection-log').innerHTML = '<p class="text-muted">Detection events will appear here...</p>';
+}
+
+// Update threshold displays
+document.getElementById('video-threshold').addEventListener('input', function() {
+    document.getElementById('video-threshold-value').textContent = this.value;
+});
+
+document.getElementById('audio-threshold').addEventListener('input', function() {
+    document.getElementById('audio-threshold-value').textContent = this.value;
+});
+
+// Check audio status on page load
+function checkAudioStatus() {
+    if (audioStatusChecked) return;
+
+    fetch('/get_audio_status')
+        .then(response => response.json())
+        .then(data => {
+            audioStatusChecked = true;
+            const audioStatusText = document.getElementById('audio-status-text');
+            const enableAudioCheckbox = document.getElementById('enable-audio');
+
+            if (data.available && data.initialized) {
+                audioStatusText.textContent = '✅ Audio capture available and active';
+                audioStatusText.className = 'form-text text-success';
+                enableAudioCheckbox.disabled = false;
+            } else if (data.available && !data.initialized) {
+                audioStatusText.textContent = '⚠️ Audio available but not initialized';
+                audioStatusText.className = 'form-text text-warning';
+                enableAudioCheckbox.disabled = true;
+            } else {
+                audioStatusText.textContent = '❌ Audio capture not available (microphone access required)';
+                audioStatusText.className = 'form-text text-danger';
+                enableAudioCheckbox.disabled = true;
+                enableAudioCheckbox.checked = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking audio status:', error);
+            const audioStatusText = document.getElementById('audio-status-text');
+            audioStatusText.textContent = '❌ Error checking audio status';
+            audioStatusText.className = 'form-text text-danger';
+        });
+}
+
+// Check audio status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(checkAudioStatus, 1000); // Check after 1 second
+});
+</script>
+{% endblock %}

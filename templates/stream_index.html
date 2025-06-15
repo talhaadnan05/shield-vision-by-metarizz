@@ -1,0 +1,67 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Video Stream</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+                text-align: center;
+            }
+            h1 {
+                color: #333;
+            }
+            .video-container {
+                margin: 20px auto;
+                max-width: 800px;
+                border: 1px solid #ccc;
+                padding: 10px;
+            }
+            img {
+                max-width: 100%;
+                height: auto;
+            }
+            .controls {
+                margin: 20px auto;
+                max-width: 800px;
+            }
+            button {
+                padding: 10px 15px;
+                margin: 5px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            button:hover {
+                background-color: #45a049;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Live Video Stream</h1>
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" alt="Video Stream">
+        </div>
+        <div class="controls">
+            <button onclick="switchToWebcam()">Use Webcam</button>
+            <button onclick="switchToVideo('C:/hyd/Safe Gaurd 360/WhatsApp Video 2025-02-05 at 18.15.54_46a603a1.mp4')">Video 1</button>
+            <button onclick="switchToVideo('C:/hyd/Safe Gaurd 360/WhatsApp Video 2025-02-05 at 18.30.22_edf1a5cb.mp4')">Video 2</button>
+        </div>
+        
+        <script>
+            function switchToWebcam() {
+                fetch('/webcam')
+                    .then(response => console.log('Switched to webcam'));
+            }
+            
+            function switchToVideo(path) {
+                fetch('/video/' + encodeURIComponent(path))
+                    .then(response => console.log('Switched to video: ' + path));
+            }
+        </script>
+    </body>
+    </html>
+    

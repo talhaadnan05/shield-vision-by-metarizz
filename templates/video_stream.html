@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Video Stream - Safe Women{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-video"></i> Video Stream</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form id="stream-form" class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="stream_url" class="form-label">Video Source</label>
+                                    <input type="text" class="form-control" id="stream_url" name="stream_url"
+                                           placeholder="Enter video source URL or 0 for webcam" required>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button type="button" id="connect-btn" class="btn btn-primary me-2">
+                                        <i class="fas fa-play"></i> Connect
+                                    </button>
+                                    <button type="button" id="stop-btn" class="btn btn-danger" disabled>
+                                        <i class="fas fa-stop"></i> Stop
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Quick Connect</h5>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="0">
+                                        <i class="fas fa-video"></i> Webcam
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="C:\hyd\Safe Gaurd 360\WhatsApp Video 2025-02-05 at 18.15.54_46a603a1.mp4">
+                                        <i class="fas fa-video"></i> Local Video 1
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="C:\hyd\Safe Gaurd 360\WhatsApp Video 2025-02-05 at 18.30.22_edf1a5cb.mp4">
+                                        <i class="fas fa-video"></i> Local Video 2
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">
+                                        <i class="fas fa-video"></i> Sample Video
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="http://127.0.0.1:8000/video_feed">
+                                        <i class="fas fa-video"></i> Live Camera (Local Server)
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4">
+                                        <i class="fas fa-video"></i> Elephant's Dream
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4">
+                                        <i class="fas fa-video"></i> Sintel
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4">
+                                        <i class="fas fa-video"></i> Tears of Steel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="stream-status" class="alert alert-info">
+                                Enter a video source and click Connect to start streaming.
+                            </div>
+                            <div id="stream-container" class="text-center position-relative">
+                                <!-- Loading spinner overlay -->
+                                <div id="loading-overlay" class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center" style="top: 0; left: 0; background-color: rgba(0,0,0,0.5); z-index: 10; display: none;">
+                                    <div class="spinner-border text-light" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <!-- Stream image -->
+                                <img id="stream-image" src="" class="img-fluid" style="max-height: 600px; display: none;">
+                            </div>
+                            <div id="stream-controls" class="mt-2 text-center">
+                                <div class="btn-group">
+                                    <button id="fullscreen-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-expand"></i> Fullscreen
+                                    </button>
+                                    <button id="screenshot-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-camera"></i> Screenshot
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4><i class="fas fa-info-circle"></i> About Video Streaming</h4>
+                </div>
+                <div class="card-body">
+                    <p>This page allows you to view video from various sources including webcams, local files, and online streams.</p>
+
+                    <h5>Working Video Sources:</h5>
+                    <ul>
+                        <li><strong>Webcam</strong>: Enter <code>0</code> in the Video Source field</li>
+                        <li><strong>Local Video Files</strong>: Enter the full path to a video file</li>
+                        <li><strong>HTTP Streams</strong>: Enter an HTTP URL to a video file</li>
+                    </ul>
+
+                    <h5>Recommended HTTP Video Streams:</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Short Videos:</h6>
+                            <ul>
+                                <li><code>http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4</code></li>
+                                <li><code>http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4</code></li>
+                                <li><code>http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4</code></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Feature Films:</h6>
+                            <ul>
+                                <li><code>http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4</code></li>
+                                <li><code>http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4</code></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> RTSP streams are not currently working due to network restrictions. We recommend using HTTP video streams or your webcam instead.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const streamUrlInput = document.getElementById('stream_url');
+        const connectBtn = document.getElementById('connect-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const streamStatus = document.getElementById('stream-status');
+        const streamImage = document.getElementById('stream-image');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const screenshotBtn = document.getElementById('screenshot-btn');
+
+        // Stream state
+        let streamActive = false;
+
+        // Quick connect buttons
+        document.querySelectorAll('.quick-connect').forEach(button => {
+            button.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                streamUrlInput.value = url;
+                connectToStream();
+            });
+        });
+
+        // Connect button
+        connectBtn.addEventListener('click', connectToStream);
+
+        // Stop button
+        stopBtn.addEventListener('click', stopStream);
+
+        // Fullscreen button
+        fullscreenBtn.addEventListener('click', function() {
+            if (streamImage.requestFullscreen) {
+                streamImage.requestFullscreen();
+            } else if (streamImage.webkitRequestFullscreen) { /* Safari */
+                streamImage.webkitRequestFullscreen();
+            } else if (streamImage.msRequestFullscreen) { /* IE11 */
+                streamImage.msRequestFullscreen();
+            }
+        });
+
+        // Screenshot button
+        screenshotBtn.addEventListener('click', function() {
+            if (!streamActive) return;
+
+            try {
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = streamImage.naturalWidth;
+                canvas.height = streamImage.naturalHeight;
+
+                // Draw the image on the canvas
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(streamImage, 0, 0);
+
+                // Create a download link
+                const link = document.createElement('a');
+                link.download = `screenshot_${new Date().toISOString().replace(/:/g, '-')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Show success message
+                alert('Screenshot saved!');
+            } catch (e) {
+                console.error('Error taking screenshot:', e);
+                alert('Failed to take screenshot');
+            }
+        });
+
+        function connectToStream() {
+            const streamUrl = streamUrlInput.value.trim();
+
+            if (!streamUrl) {
+                alert('Please enter a video source');
+                return;
+            }
+
+            // Update UI
+            streamStatus.textContent = 'Connecting to stream...';
+            streamStatus.className = 'alert alert-info';
+            streamImage.style.display = 'none';
+            loadingOverlay.style.display = 'flex';
+
+            // Start connection
+            startStream(streamUrl);
+        }
+
+        function startStream(streamUrl) {
+            // Update UI
+            connectBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            // Set the image source to the streaming endpoint with a timestamp to prevent caching
+            const videoUrl = `{{ url_for('video_stream') }}?url=${encodeURIComponent(streamUrl)}&t=${new Date().getTime()}`;
+
+            // Create a new image element to avoid caching issues
+            const newImg = new Image();
+            newImg.id = 'stream-image';
+            newImg.className = 'img-fluid';
+            newImg.style.maxHeight = '600px';
+
+            // Handle image load success
+            newImg.onload = function() {
+                // Update UI
+                streamStatus.textContent = 'Connected to stream';
+                streamStatus.className = 'alert alert-success';
+                loadingOverlay.style.display = 'none';
+                streamActive = true;
+
+                // Enable controls
+                fullscreenBtn.disabled = false;
+                screenshotBtn.disabled = false;
+            };
+
+            // Handle image load error
+            newImg.onerror = function() {
+                // Update UI
+                streamStatus.textContent = 'Failed to connect to stream';
+                streamStatus.className = 'alert alert-danger';
+                loadingOverlay.style.display = 'none';
+                stopStream();
+            };
+
+            // Set the source and replace the existing image
+            newImg.src = videoUrl;
+            const container = document.getElementById('stream-container');
+            const oldImg = streamImage;
+            container.replaceChild(newImg, oldImg);
+
+            // Update reference to the new image
+            streamImage = newImg;
+            streamImage.style.display = 'block';
+        }
+
+        function stopStream() {
+            // Update UI
+            connectBtn.disabled = false;
+            stopBtn.disabled = true;
+            fullscreenBtn.disabled = true;
+            screenshotBtn.disabled = true;
+            streamImage.style.display = 'none';
+            streamImage.src = '';
+            loadingOverlay.style.display = 'none';
+            streamStatus.textContent = 'Stream disconnected';
+            streamStatus.className = 'alert alert-warning';
+            streamActive = false;
+        }
+    });
+</script>
+{% endblock %}

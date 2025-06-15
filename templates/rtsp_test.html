@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTSP Stream Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        .col {
+            flex: 1;
+            padding: 0 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .stream-container {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .examples {
+            margin-top: 20px;
+            text-align: left;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .example-btn {
+            background-color: #007bff;
+            margin: 5px;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RTSP Stream Test</h1>
+        
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label for="user">Username:</label>
+                    <input type="text" id="user" value="admin">
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" value="admin">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label for="ip">IP Address:</label>
+                    <input type="text" id="ip" value="192.168.1.60">
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="port">Port:</label>
+                    <input type="number" id="port" value="554">
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="path">Stream Path:</label>
+                    <input type="text" id="path" value="main">
+                </div>
+            </div>
+        </div>
+        
+        <button id="connect-btn">Connect</button>
+        
+        <div class="stream-container">
+            <div class="status" id="status">Enter RTSP details and click Connect</div>
+            <img id="stream" src="" style="max-width: 100%; display: none;">
+        </div>
+        
+        <div class="examples">
+            <h3>Example RTSP URLs:</h3>
+            <div>
+                <button class="example-btn" data-url="rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mp4">Test Stream</button>
+                <button class="example-btn" data-url="0">Webcam</button>
+            </div>
+            <h4>Common Stream Paths:</h4>
+            <ul>
+                <li><strong>Hikvision:</strong> Streaming/Channels/1</li>
+                <li><strong>Dahua:</strong> cam/realmonitor?channel=1&subtype=0</li>
+                <li><strong>Axis:</strong> axis-media/media.amp</li>
+                <li><strong>Generic:</strong> live/main or stream1</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const connectBtn = document.getElementById('connect-btn');
+            const status = document.getElementById('status');
+            const stream = document.getElementById('stream');
+            
+            // Connect button
+            connectBtn.addEventListener('click', function() {
+                const user = document.getElementById('user').value;
+                const password = document.getElementById('password').value;
+                const ip = document.getElementById('ip').value;
+                const port = document.getElementById('port').value;
+                const path = document.getElementById('path').value;
+                
+                // Update status
+                status.textContent = 'Connecting to RTSP stream...';
+                stream.style.display = 'none';
+                
+                // Build stream URL
+                const streamUrl = `/rtsp_stream?user=${encodeURIComponent(user)}&password=${encodeURIComponent(password)}&ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}&path=${encodeURIComponent(path)}&t=${new Date().getTime()}`;
+                
+                // Set stream source
+                stream.src = streamUrl;
+                stream.style.display = 'block';
+                
+                // Handle load events
+                stream.onload = function() {
+                    status.textContent = 'Connected to RTSP stream';
+                };
+                
+                stream.onerror = function() {
+                    status.textContent = 'Failed to connect to RTSP stream';
+                    stream.style.display = 'none';
+                };
+            });
+            
+            // Example buttons
+            document.querySelectorAll('.example-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const url = this.getAttribute('data-url');
+                    
+                    if (url === '0') {
+                        // For webcam
+                        document.getElementById('user').value = '';
+                        document.getElementById('password').value = '';
+                        document.getElementById('ip').value = '0';
+                        document.getElementById('port').value = '0';
+                        document.getElementById('path').value = '';
+                    } else {
+                        // For test stream
+                        document.getElementById('user').value = '';
+                        document.getElementById('password').value = '';
+                        document.getElementById('ip').value = url;
+                        document.getElementById('port').value = '0';
+                        document.getElementById('path').value = '';
+                    }
+                    
+                    // Trigger connect
+                    connectBtn.click();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}Optimized RTSP Stream - Safe Women{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-video"></i> Optimized RTSP Stream</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form id="rtsp-form" class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="rtsp_url" class="form-label">RTSP URL</label>
+                                    <input type="text" class="form-control" id="rtsp_url" name="rtsp_url" 
+                                           placeholder="rtsp://example.com/stream or 0 for webcam" required>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button type="button" id="connect-btn" class="btn btn-primary me-2">
+                                        <i class="fas fa-play"></i> Connect
+                                    </button>
+                                    <button type="button" id="stop-btn" class="btn btn-danger" disabled>
+                                        <i class="fas fa-stop"></i> Stop
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Connection Settings</h5>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="use-tcp" checked>
+                                        <label class="form-check-label" for="use-tcp">Use TCP (more reliable)</label>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="buffer-size" class="form-label">Buffer Size</label>
+                                        <select class="form-select" id="buffer-size">
+                                            <option value="1" selected>1 (lowest latency)</option>
+                                            <option value="2">2</option>
+                                            <option value="3">3 (more reliable)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Quick Connect</h5>
+                                    <div class="d-flex flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary m-1 quick-connect" 
+                                                data-url="0">
+                                            <i class="fas fa-webcam"></i> Webcam
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary m-1 quick-connect" 
+                                                data-url="rtsp://wzmedia.dot.ca.gov:1935/D3/Donner_Lake.stream">
+                                            <i class="fas fa-video"></i> Traffic Cam 1
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary m-1 quick-connect" 
+                                                data-url="rtsp://wzmedia.dot.ca.gov:1935/D3/Donner_Pass.stream">
+                                            <i class="fas fa-video"></i> Traffic Cam 2
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary m-1 quick-connect" 
+                                                data-url="rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa">
+                                            <i class="fas fa-video"></i> Surveillance Cam
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary m-1 quick-connect" 
+                                                data-url="rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mp4">
+                                            <i class="fas fa-video"></i> Test Stream
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="stream-status" class="alert alert-info">
+                                Enter an RTSP URL and click Connect to start streaming.
+                            </div>
+                            <div id="stream-container" class="text-center position-relative">
+                                <!-- Loading spinner overlay -->
+                                <div id="loading-overlay" class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center" style="top: 0; left: 0; background-color: rgba(0,0,0,0.5); z-index: 10; display: none;">
+                                    <div class="spinner-border text-light" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <!-- Stream image -->
+                                <img id="stream-image" src="" class="img-fluid" style="max-height: 600px; display: none;">
+                            </div>
+                            <div id="stream-controls" class="mt-2 text-center">
+                                <div class="btn-group">
+                                    <button id="fullscreen-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-expand"></i> Fullscreen
+                                    </button>
+                                    <button id="screenshot-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-camera"></i> Screenshot
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="performance-info" class="mt-2">
+                                <div class="progress" style="height: 5px;">
+                                    <div id="connection-quality" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span id="connection-status">Not connected</span>
+                                    <span id="stream-fps">0 FPS</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4><i class="fas fa-info-circle"></i> About Optimized RTSP Streaming</h4>
+                </div>
+                <div class="card-body">
+                    <p>This page uses an optimized RTSP streaming implementation with the following features:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Performance Optimizations:</h5>
+                            <ul>
+                                <li><strong>Threaded Capture</strong>: Frames are captured in a separate thread to prevent blocking</li>
+                                <li><strong>Frame Buffering</strong>: Configurable buffer size to balance latency and reliability</li>
+                                <li><strong>Transport Protocol</strong>: Choose between TCP (reliable) and UDP (low latency)</li>
+                                <li><strong>Automatic Reconnection</strong>: Automatically reconnects if the stream is lost</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>RTSP URL Examples:</h5>
+                            <ul>
+                                <li><code>rtsp://wzmedia.dot.ca.gov:1935/D3/Donner_Lake.stream</code></li>
+                                <li><code>rtsp://170.93.143.139/rtplive/470011e600ef003a004ee33696235daa</code></li>
+                                <li><code>rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mp4</code></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Note:</strong> RTSP streams may not work due to network restrictions or firewall settings. If you experience issues, try changing the transport protocol to UDP or using a different URL.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const rtspUrlInput = document.getElementById('rtsp_url');
+        const connectBtn = document.getElementById('connect-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const useTcpSwitch = document.getElementById('use-tcp');
+        const bufferSizeSelect = document.getElementById('buffer-size');
+        const streamStatus = document.getElementById('stream-status');
+        const streamImage = document.getElementById('stream-image');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const connectionQuality = document.getElementById('connection-quality');
+        const connectionStatus = document.getElementById('connection-status');
+        const streamFps = document.getElementById('stream-fps');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const screenshotBtn = document.getElementById('screenshot-btn');
+        
+        // Stream state
+        let streamActive = false;
+        let frameCount = 0;
+        let lastFrameTime = 0;
+        let fpsUpdateInterval;
+        
+        // Quick connect buttons
+        document.querySelectorAll('.quick-connect').forEach(button => {
+            button.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                rtspUrlInput.value = url;
+                connectToStream();
+            });
+        });
+        
+        // Connect button
+        connectBtn.addEventListener('click', connectToStream);
+        
+        // Stop button
+        stopBtn.addEventListener('click', stopStream);
+        
+        // Fullscreen button
+        fullscreenBtn.addEventListener('click', function() {
+            if (streamImage.requestFullscreen) {
+                streamImage.requestFullscreen();
+            } else if (streamImage.webkitRequestFullscreen) { /* Safari */
+                streamImage.webkitRequestFullscreen();
+            } else if (streamImage.msRequestFullscreen) { /* IE11 */
+                streamImage.msRequestFullscreen();
+            }
+        });
+        
+        // Screenshot button
+        screenshotBtn.addEventListener('click', function() {
+            if (!streamActive) return;
+            
+            try {
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = streamImage.naturalWidth;
+                canvas.height = streamImage.naturalHeight;
+                
+                // Draw the image on the canvas
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(streamImage, 0, 0);
+                
+                // Create a download link
+                const link = document.createElement('a');
+                link.download = `screenshot_${new Date().toISOString().replace(/:/g, '-')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                // Show success message
+                alert('Screenshot saved!');
+            } catch (e) {
+                console.error('Error taking screenshot:', e);
+                alert('Failed to take screenshot');
+            }
+        });
+        
+        function connectToStream() {
+            const rtspUrl = rtspUrlInput.value.trim();
+            
+            if (!rtspUrl) {
+                alert('Please enter an RTSP URL');
+                return;
+            }
+            
+            // Get connection settings
+            const useTcp = useTcpSwitch.checked;
+            const bufferSize = bufferSizeSelect.value;
+            
+            // Update UI
+            streamStatus.textContent = 'Connecting to stream...';
+            streamStatus.className = 'alert alert-info';
+            streamImage.style.display = 'none';
+            loadingOverlay.style.display = 'flex';
+            connectionQuality.style.width = '0%';
+            connectionStatus.textContent = 'Connecting...';
+            
+            // Start connection
+            startStream(rtspUrl, useTcp, bufferSize);
+        }
+        
+        function startStream(rtspUrl, useTcp, bufferSize) {
+            // Update UI
+            connectBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            // Set the image source to the streaming endpoint with parameters
+            const streamUrl = `{{ url_for('optimized_rtsp_stream') }}?url=${encodeURIComponent(rtspUrl)}&tcp=${useTcp}&buffer=${bufferSize}&t=${new Date().getTime()}`;
+            
+            // Create a new image element to avoid caching issues
+            const newImg = new Image();
+            newImg.id = 'stream-image';
+            newImg.className = 'img-fluid';
+            newImg.style.maxHeight = '600px';
+            
+            // Handle image load success
+            newImg.onload = function() {
+                // Update UI
+                streamStatus.textContent = 'Connected to stream';
+                streamStatus.className = 'alert alert-success';
+                loadingOverlay.style.display = 'none';
+                streamActive = true;
+                
+                // Enable controls
+                fullscreenBtn.disabled = false;
+                screenshotBtn.disabled = false;
+                
+                // Start monitoring FPS
+                startFpsMonitoring();
+                
+                // Update connection quality
+                updateConnectionQuality(100);
+            };
+            
+            // Handle image load error
+            newImg.onerror = function() {
+                // Update UI
+                streamStatus.textContent = 'Failed to connect to stream';
+                streamStatus.className = 'alert alert-danger';
+                loadingOverlay.style.display = 'none';
+                stopStream();
+            };
+            
+            // Set the source and replace the existing image
+            newImg.src = streamUrl;
+            const container = document.getElementById('stream-container');
+            const oldImg = streamImage;
+            container.replaceChild(newImg, oldImg);
+            
+            // Update reference to the new image
+            streamImage = newImg;
+            streamImage.style.display = 'block';
+        }
+        
+        function stopStream() {
+            // Update UI
+            connectBtn.disabled = false;
+            stopBtn.disabled = true;
+            fullscreenBtn.disabled = true;
+            screenshotBtn.disabled = true;
+            streamImage.style.display = 'none';
+            streamImage.src = '';
+            loadingOverlay.style.display = 'none';
+            streamStatus.textContent = 'Stream disconnected';
+            streamStatus.className = 'alert alert-warning';
+            streamActive = false;
+            
+            // Stop FPS monitoring
+            stopFpsMonitoring();
+            
+            // Update connection quality
+            updateConnectionQuality(0);
+            connectionStatus.textContent = 'Not connected';
+            streamFps.textContent = '0 FPS';
+        }
+        
+        function startFpsMonitoring() {
+            // Reset counters
+            frameCount = 0;
+            lastFrameTime = performance.now();
+            
+            // Start interval to update FPS display
+            fpsUpdateInterval = setInterval(() => {
+                // Calculate FPS
+                const now = performance.now();
+                const elapsed = now - lastFrameTime;
+                
+                if (elapsed > 0) {
+                    const fps = frameCount / (elapsed / 1000);
+                    streamFps.textContent = `${fps.toFixed(1)} FPS`;
+                    
+                    // Update connection quality based on FPS
+                    let quality = 100;
+                    if (fps < 5) quality = 30;
+                    else if (fps < 15) quality = 60;
+                    else if (fps < 25) quality = 80;
+                    
+                    updateConnectionQuality(quality);
+                    
+                    // Reset counters
+                    frameCount = 0;
+                    lastFrameTime = now;
+                }
+            }, 1000);
+            
+            // Add event listener to count frames
+            streamImage.addEventListener('load', countFrame);
+        }
+        
+        function stopFpsMonitoring() {
+            clearInterval(fpsUpdateInterval);
+            streamImage.removeEventListener('load', countFrame);
+        }
+        
+        function countFrame() {
+            frameCount++;
+        }
+        
+        function updateConnectionQuality(percent) {
+            connectionQuality.style.width = `${percent}%`;
+            
+            // Update color based on quality
+            connectionQuality.className = 'progress-bar';
+            if (percent >= 80) {
+                connectionQuality.classList.add('bg-success');
+                connectionStatus.textContent = 'Excellent';
+            } else if (percent >= 60) {
+                connectionQuality.classList.add('bg-info');
+                connectionStatus.textContent = 'Good';
+            } else if (percent >= 30) {
+                connectionQuality.classList.add('bg-warning');
+                connectionStatus.textContent = 'Fair';
+            } else {
+                connectionQuality.classList.add('bg-danger');
+                connectionStatus.textContent = 'Poor';
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}RTSP Live Feed - Safe Women{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-video"></i> RTSP Live Feed</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form id="rtsp-form" class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="rtsp_url" class="form-label">RTSP URL</label>
+                                    <input type="text" class="form-control" id="rtsp_url" name="rtsp_url"
+                                           placeholder="rtsp://example.com/stream or 0 for webcam" required>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button type="button" id="connect-btn" class="btn btn-primary me-2">
+                                        <i class="fas fa-play"></i> Connect
+                                    </button>
+                                    <button type="button" id="stop-btn" class="btn btn-danger" disabled>
+                                        <i class="fas fa-stop"></i> Stop
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Quick Connect</h5>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="0">
+                                        <i class="fas fa-video"></i> Webcam
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mp4">
+                                        <i class="fas fa-video"></i> Test Stream 1
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 quick-connect"
+                                            data-url="C:\hyd\Safe Gaurd 360\WhatsApp Video 2025-02-05 at 18.15.54_46a603a1.mp4">
+                                        <i class="fas fa-video"></i> Local Video
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div id="stream-status" class="alert alert-info">
+                                Enter an RTSP URL and click Connect to start streaming.
+                            </div>
+                            <div id="stream-container" class="text-center position-relative">
+                                <!-- Loading spinner overlay -->
+                                <div id="loading-overlay" class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center" style="top: 0; left: 0; background-color: rgba(0,0,0,0.5); z-index: 10; display: none !important;">
+                                    <div class="spinner-border text-light" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                                <!-- Stream image -->
+                                <img id="stream-image" src="" class="img-fluid" style="max-height: 600px; display: none;">
+                            </div>
+                            <div id="stream-controls" class="mt-2 text-center">
+                                <div class="btn-group">
+                                    <button id="fullscreen-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-expand"></i> Fullscreen
+                                    </button>
+                                    <button id="screenshot-btn" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-camera"></i> Screenshot
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="debug-info" class="mt-2 small text-muted"></div>
+                            <div id="performance-info" class="mt-2 small text-muted">
+                                <div class="progress" style="height: 5px;">
+                                    <div id="connection-quality" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span id="connection-status">Not connected</span>
+                                    <span id="stream-fps">0 FPS</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4><i class="fas fa-info-circle"></i> About RTSP Streaming</h4>
+                </div>
+                <div class="card-body">
+                    <p>Real Time Streaming Protocol (RTSP) is a network control protocol designed for use in entertainment and communications systems to control streaming media servers.</p>
+
+                    <h5>How to Use:</h5>
+                    <ol>
+                        <li>Enter an RTSP URL in the form above</li>
+                        <li>Click "Connect" to start streaming</li>
+                        <li>Click "Stop" to end the stream</li>
+                    </ol>
+
+                    <h5>Common RTSP URL Formats:</h5>
+                    <ul>
+                        <li><code>rtsp://username:password@ip_address:port/stream</code></li>
+                        <li><code>rtsp://ip_address:port/stream</code></li>
+                    </ul>
+
+                    <div class="alert alert-warning">
+                        <strong>Note:</strong> For security cameras, you may need to consult your camera's documentation for the correct RTSP URL format.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const rtspUrlInput = document.getElementById('rtsp_url');
+        const connectBtn = document.getElementById('connect-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const streamStatus = document.getElementById('stream-status');
+        const streamImage = document.getElementById('stream-image');
+        const debugInfo = document.getElementById('debug-info');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const connectionQuality = document.getElementById('connection-quality');
+        const connectionStatus = document.getElementById('connection-status');
+        const streamFps = document.getElementById('stream-fps');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const screenshotBtn = document.getElementById('screenshot-btn');
+
+        // Stream state
+        let streamActive = false;
+        let connectionAttempts = 0;
+        const maxAttempts = 3;
+        let frameCount = 0;
+        let lastFrameTime = 0;
+        let fpsUpdateInterval;
+
+        // Quick connect buttons
+        document.querySelectorAll('.quick-connect').forEach(button => {
+            button.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                rtspUrlInput.value = url;
+                connectToStream();
+            });
+        });
+
+        // Connect button
+        connectBtn.addEventListener('click', connectToStream);
+
+        // Stop button
+        stopBtn.addEventListener('click', stopStream);
+
+        // Fullscreen button
+        fullscreenBtn.addEventListener('click', function() {
+            if (streamImage.requestFullscreen) {
+                streamImage.requestFullscreen();
+            } else if (streamImage.webkitRequestFullscreen) { /* Safari */
+                streamImage.webkitRequestFullscreen();
+            } else if (streamImage.msRequestFullscreen) { /* IE11 */
+                streamImage.msRequestFullscreen();
+            }
+        });
+
+        // Screenshot button
+        screenshotBtn.addEventListener('click', function() {
+            if (!streamActive) return;
+
+            try {
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = streamImage.naturalWidth;
+                canvas.height = streamImage.naturalHeight;
+
+                // Draw the image on the canvas
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(streamImage, 0, 0);
+
+                // Create a download link
+                const link = document.createElement('a');
+                link.download = `screenshot_${new Date().toISOString().replace(/:/g, '-')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Show success message
+                showToast('Screenshot saved!', 'success');
+            } catch (e) {
+                console.error('Error taking screenshot:', e);
+                showToast('Failed to take screenshot', 'danger');
+            }
+        });
+
+        function connectToStream() {
+            const rtspUrl = rtspUrlInput.value.trim();
+
+            if (!rtspUrl) {
+                showToast('Please enter an RTSP URL', 'warning');
+                return;
+            }
+
+            // Update UI
+            streamStatus.textContent = 'Connecting to stream...';
+            streamStatus.className = 'alert alert-info';
+            streamImage.style.display = 'none';
+            loadingOverlay.style.display = 'flex !important';
+            debugInfo.innerHTML = `Attempting to connect to: ${rtspUrl}`;
+            connectionAttempts = 0;
+            connectionQuality.style.width = '0%';
+            connectionStatus.textContent = 'Connecting...';
+
+            // Start connection
+            startStream(rtspUrl);
+        }
+
+        function startStream(rtspUrl) {
+            // Update UI
+            connectBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            // Set the image source to the streaming endpoint with a timestamp to prevent caching
+            const streamUrl = `{{ url_for('rtsp_stream') }}?url=${encodeURIComponent(rtspUrl)}&t=${new Date().getTime()}`;
+            debugInfo.innerHTML += `<br>Stream URL: ${streamUrl}`;
+
+            // Create a new image element to avoid caching issues
+            const newImg = new Image();
+            newImg.id = 'stream-image';
+            newImg.className = 'img-fluid';
+            newImg.style.maxHeight = '600px';
+
+            // Handle image load success
+            newImg.onload = function() {
+                // Update UI
+                streamStatus.textContent = 'Connected to stream';
+                streamStatus.className = 'alert alert-success';
+                debugInfo.innerHTML += '<br>Stream loaded successfully!';
+                loadingOverlay.style.display = 'none !important';
+                streamActive = true;
+
+                // Enable controls
+                fullscreenBtn.disabled = false;
+                screenshotBtn.disabled = false;
+
+                // Start monitoring FPS
+                startFpsMonitoring();
+
+                // Update connection quality
+                updateConnectionQuality(100);
+            };
+
+            // Handle image load error
+            newImg.onerror = function() {
+                connectionAttempts++;
+                debugInfo.innerHTML += `<br>Error: Failed to load stream (Attempt ${connectionAttempts}/${maxAttempts})`;
+
+                if (connectionAttempts < maxAttempts) {
+                    // Try again
+                    debugInfo.innerHTML += '<br>Retrying...';
+                    updateConnectionQuality(30);
+                    setTimeout(() => {
+                        newImg.src = `${streamUrl}&retry=${connectionAttempts}`;
+                    }, 2000);
+                } else {
+                    // Give up after max attempts
+                    streamStatus.textContent = 'Failed to connect to stream';
+                    streamStatus.className = 'alert alert-danger';
+                    debugInfo.innerHTML += '<br>Maximum connection attempts reached. Please check the URL and try again.';
+                    loadingOverlay.style.display = 'none !important';
+                    updateConnectionQuality(0);
+                    stopStream();
+                }
+            };
+
+            // Set the source and replace the existing image
+            newImg.src = streamUrl;
+            const container = document.getElementById('stream-container');
+            const oldImg = streamImage;
+            container.replaceChild(newImg, oldImg);
+
+            // Update reference to the new image
+            streamImage = newImg;
+            streamImage.style.display = 'block';
+        }
+
+        function stopStream() {
+            // Update UI
+            connectBtn.disabled = false;
+            stopBtn.disabled = true;
+            fullscreenBtn.disabled = true;
+            screenshotBtn.disabled = true;
+            streamImage.style.display = 'none';
+            streamImage.src = '';
+            loadingOverlay.style.display = 'none !important';
+            streamStatus.textContent = 'Stream disconnected';
+            streamStatus.className = 'alert alert-warning';
+            debugInfo.innerHTML += '<br>Stream stopped';
+            streamActive = false;
+
+            // Stop FPS monitoring
+            stopFpsMonitoring();
+
+            // Update connection quality
+            updateConnectionQuality(0);
+            connectionStatus.textContent = 'Not connected';
+            streamFps.textContent = '0 FPS';
+        }
+
+        function startFpsMonitoring() {
+            // Reset counters
+            frameCount = 0;
+            lastFrameTime = performance.now();
+
+            // Start interval to update FPS display
+            fpsUpdateInterval = setInterval(() => {
+                // Calculate FPS
+                const now = performance.now();
+                const elapsed = now - lastFrameTime;
+
+                if (elapsed > 0) {
+                    const fps = frameCount / (elapsed / 1000);
+                    streamFps.textContent = `${fps.toFixed(1)} FPS`;
+
+                    // Update connection quality based on FPS
+                    let quality = 100;
+                    if (fps < 5) quality = 30;
+                    else if (fps < 15) quality = 60;
+                    else if (fps < 25) quality = 80;
+
+                    updateConnectionQuality(quality);
+
+                    // Reset counters
+                    frameCount = 0;
+                    lastFrameTime = now;
+                }
+            }, 1000);
+
+            // Add event listener to count frames
+            streamImage.addEventListener('load', countFrame);
+        }
+
+        function stopFpsMonitoring() {
+            clearInterval(fpsUpdateInterval);
+            streamImage.removeEventListener('load', countFrame);
+        }
+
+        function countFrame() {
+            frameCount++;
+        }
+
+        function updateConnectionQuality(percent) {
+            connectionQuality.style.width = `${percent}%`;
+
+            // Update color based on quality
+            connectionQuality.className = 'progress-bar';
+            if (percent >= 80) {
+                connectionQuality.classList.add('bg-success');
+                connectionStatus.textContent = 'Excellent';
+            } else if (percent >= 60) {
+                connectionQuality.classList.add('bg-info');
+                connectionStatus.textContent = 'Good';
+            } else if (percent >= 30) {
+                connectionQuality.classList.add('bg-warning');
+                connectionStatus.textContent = 'Fair';
+            } else {
+                connectionQuality.classList.add('bg-danger');
+                connectionStatus.textContent = 'Poor';
+            }
+        }
+
+        function showToast(message, type) {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+
+            // Create toast content
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+
+            // Add to document
+            const toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.appendChild(toast);
+            document.body.appendChild(toastContainer);
+
+            // Initialize and show toast
+            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+            bsToast.show();
+
+            // Remove from DOM after hiding
+            toast.addEventListener('hidden.bs.toast', function() {
+                document.body.removeChild(toastContainer);
+            });
+        }
+    });
+</script>
+{% endblock %}
